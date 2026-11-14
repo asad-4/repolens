@@ -10,3 +10,8 @@ As a computer science student, I've noticed that understanding an unfamiliar cod
 - R4: Display a summary at the end showing the total number of Python files scanned, lines of code, functions, and classes.
 - R5: Automatically skip unnecessary directories such as .git, .venv, venv, and __pycache__.
 - R6: Display a clear error message if the provided folder does not exist or cannot be accessed.
+
+# Round 2 requirements
+
+- R7: When RepoLens can't access a folder, show a clear warning with the folder's path, then continue scanning everything else, so users know their results are incomplete.
+- R8: Count each actual Python file only once, even if multiple symlinks point to it, so the final totals stay accurate.
