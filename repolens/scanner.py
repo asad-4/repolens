@@ -6,7 +6,7 @@ import os
 import tokenize
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 # R5: directory names that are never descended into.
 SKIP_DIRS = frozenset(
@@ -90,9 +90,32 @@ def discover(root: Path) -> Discovery:
             if name.endswith(".py"):
                 found.append(Path(dirpath) / name)
     return Discovery(
-        files=sorted(found, key=lambda p: _rel(p, root)),
+        files=sorted(_one_path_per_file(found), key=lambda p: _rel(p, root)),
         inaccessible_dirs=sorted(inaccessible),
     )
+
+
+def _one_path_per_file(paths: List[Path]) -> List[Path]:
+    """Keep one path per real file (R8).
+
+    Paths are the same file when os.stat (which follows symlinks) gives the
+    same (device, inode); see docs/decisions/0002. From each group, keep the
+    first non-symlink path in sorted order, else the first symlink. Paths
+    that cannot be stat'ed (broken links, loops) are kept as-is, so that
+    analyze_file reports them as unreadable.
+    """
+    groups = {}  # type: Dict[Union[Tuple[int, int], str], List[Path]]
+    for path in paths:
+        try:
+            st = path.stat()
+            key = (st.st_dev, st.st_ino)  # type: Union[Tuple[int, int], str]
+        except OSError:
+            key = str(path)
+        groups.setdefault(key, []).append(path)
+    return [
+        min(group, key=lambda p: (p.is_symlink(), p.as_posix()))
+        for group in groups.values()
+    ]
 
 
 def find_python_files(root: Path) -> List[Path]:
