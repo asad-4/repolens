@@ -48,6 +48,8 @@ Exactly one positional argument: the folder to scan.
 - If a file cannot be parsed (syntax error or undecodable bytes), its function
   and class counts are 0, it is marked in the output as `(parse error)`, and the
   scan continues. The program never crashes because of one bad file.
+- If a single file inside the folder cannot be read (e.g. permission denied),
+  it is still listed, with 0 for every count and the marker `(unreadable)`.
 
 ### R4 — Summary at the end
 
