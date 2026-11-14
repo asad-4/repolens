@@ -37,5 +37,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(error, file=sys.stderr)
         return 1
 
-    print(format_report(scan(root)))
+    result = scan(root)
+    # R7: warn about each inaccessible subfolder, then report what was found.
+    for rel in result.inaccessible_dirs:
+        print("Warning: cannot access folder: {}".format(rel), file=sys.stderr)
+    print(format_report(result.files, len(result.inaccessible_dirs)))
     return 0

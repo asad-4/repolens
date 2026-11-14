@@ -7,7 +7,7 @@ from repolens.scanner import FileStats
 _HEADERS = ("File", "Lines", "Functions", "Classes")
 
 
-def format_report(stats: List[FileStats]) -> str:
+def format_report(stats: List[FileStats], inaccessible_dirs: int = 0) -> str:
     lines = []
     if stats:
         path_w = max(len(_HEADERS[0]), max(len(s.path) for s in stats))
@@ -35,4 +35,10 @@ def format_report(stats: List[FileStats]) -> str:
     lines.append("  Lines of code:  {}".format(sum(s.loc for s in stats)))
     lines.append("  Functions:      {}".format(sum(s.functions for s in stats)))
     lines.append("  Classes:        {}".format(sum(s.classes for s in stats)))
+    if inaccessible_dirs:
+        # R7: tell the user the totals above are missing some folders.
+        lines.append(
+            "  Incomplete:     {} folder(s) could not be accessed "
+            "(see warnings)".format(inaccessible_dirs)
+        )
     return "\n".join(lines)

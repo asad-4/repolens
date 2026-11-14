@@ -47,16 +47,57 @@ class FileStats:
     note: Optional[str] = None  # e.g. "parse error"
 
 
-def find_python_files(root: Path) -> List[Path]:
-    """Return every .py file under root (R1), skipping SKIP_DIRS (R5), sorted."""
+@dataclass
+class Discovery:
+    files: List[Path]  # sorted by relative path
+    inaccessible_dirs: List[str]  # relative, '/'-separated, sorted (R7)
+
+
+@dataclass
+class ScanResult:
+    files: List[FileStats]
+    inaccessible_dirs: List[str]
+
+
+def _rel(path: Path, root: Path) -> str:
+    return path.relative_to(root).as_posix()
+
+
+def discover(root: Path) -> Discovery:
+    """Walk root for .py files (R1), skipping SKIP_DIRS (R5).
+
+    Subfolders that cannot be listed are recorded instead of being silently
+    dropped (R7).
+    """
     found = []
-    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+    inaccessible = []
+
+    def on_error(err: OSError) -> None:
+        # os.walk calls this when listing a directory fails. The root itself
+        # is checked by the CLI before scanning (R6), but record it anyway
+        # rather than lose the information.
+        if err.filename is None:
+            return
+        failed = Path(err.filename)
+        inaccessible.append(_rel(failed, root) if failed != root else ".")
+
+    for dirpath, dirnames, filenames in os.walk(
+        root, onerror=on_error, followlinks=False
+    ):
         # Prune in place so os.walk never enters skipped directories.
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
         for name in filenames:
             if name.endswith(".py"):
                 found.append(Path(dirpath) / name)
-    return sorted(found, key=lambda p: p.relative_to(root).as_posix())
+    return Discovery(
+        files=sorted(found, key=lambda p: _rel(p, root)),
+        inaccessible_dirs=sorted(inaccessible),
+    )
+
+
+def find_python_files(root: Path) -> List[Path]:
+    """Return every .py file under root (R1), skipping SKIP_DIRS (R5), sorted."""
+    return discover(root).files
 
 
 def count_loc(source: bytes) -> int:
@@ -114,5 +155,9 @@ def analyze_file(path: Path, root: Path) -> FileStats:
     return FileStats(rel, loc, functions, classes)
 
 
-def scan(root: Path) -> List[FileStats]:
-    return [analyze_file(p, root) for p in find_python_files(root)]
+def scan(root: Path) -> ScanResult:
+    found = discover(root)
+    return ScanResult(
+        files=[analyze_file(p, root) for p in found.files],
+        inaccessible_dirs=found.inaccessible_dirs,
+    )
