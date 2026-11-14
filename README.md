@@ -50,6 +50,13 @@ Summary
 If the folder does not exist, is not a folder, or cannot be read, repolens prints
 an `Error:` message to stderr and exits with status 1.
 
+If a folder *inside* it cannot be read, repolens prints
+`Warning: cannot access folder: <path>` to stderr, scans everything else, and
+adds an `Incomplete:` line to the summary so you know the totals are partial.
+
+A file reached through several symlinks (or hard links) is listed and counted
+only once, under its real path when that is inside the folder.
+
 ## Test
 
 ```
