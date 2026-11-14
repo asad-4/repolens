@@ -1,10 +1,10 @@
-# repolens — Specification (Round 1)
+# repolens — Specification (Rounds 1–2)
 
 repolens is a command-line tool that gives a quick overview of a Python codebase:
 which files exist, how big they are, and how many functions and classes they hold.
 
-Source of requirements: `problem.md` (R1–R6). This document makes each requirement
-precise enough to test.
+Source of requirements: `problem.md` (R1–R6 in Round 1, R7–R8 in Round 2). This
+document makes each requirement precise enough to test.
 
 ## Usage
 
@@ -22,6 +22,9 @@ Exactly one positional argument: the folder to scan.
 - Every file whose name ends in `.py` inside that folder, at any depth, is scanned.
 - Files with other extensions (`.txt`, `.pyc`, `.pyi`, …) are ignored.
 - Symbolic links to directories are not followed (avoids infinite loops).
+- A file is selected by the name of the directory entry: a symlink named `x.py`
+  is scanned (its target's contents are measured); a symlink named `x` that
+  points to `y.py` is not. Duplicates are merged as described in R8.
 
 ### R2 — Per-file relative path and lines of code
 
@@ -63,6 +66,15 @@ After the per-file list, a summary shows:
 Totals are the sums of the per-file values. If no Python files are found, the
 program prints `No Python files found.` followed by the summary with all zeros.
 
+If one or more folders could not be accessed (R7), the summary ends with one
+extra line:
+
+```
+  Incomplete:     N folder(s) could not be accessed (see warnings)
+```
+
+The line is absent when every folder was read.
+
 ### R5 — Skip unnecessary directories
 
 Directories with the following names are skipped at any depth, together with
@@ -89,6 +101,45 @@ argument or too many arguments prints a usage message and exits with status 2
 
 On success the exit status is 0.
 
+### R7 — Warn about inaccessible subfolders and keep scanning (Round 2)
+
+R6 covers the folder given on the command line. R7 covers folders **inside** it.
+
+- A subfolder "cannot be accessed" when listing its contents fails (e.g.
+  permission denied, or it disappears during the scan).
+- For each such folder, one line is printed to **stderr**:
+  `Warning: cannot access folder: <relative path>`, where the path is relative
+  to the scanned folder and `/`-separated, like file paths in the report.
+- Warnings are printed in sorted order by path, before the report is written
+  to stdout.
+- Scanning continues with every other folder. Files that were found are listed
+  and counted as usual; nothing inside the inaccessible folder is counted.
+- The summary ends with the `Incomplete:` line described in R4.
+- The exit status stays **0**: the scan itself succeeded, with a known gap.
+- Folders that are skipped by R5 are never entered, so they never produce a
+  warning. Only the inaccessible folder itself is reported, not its contents
+  (which are unknown).
+- A single unreadable *file* is still handled by R3 (`(unreadable)` row), not
+  by R7.
+
+### R8 — Count each real Python file only once (Round 2)
+
+- Two scanned paths are the **same file** when they resolve to the same
+  device and inode (`os.stat`, which follows symlinks). This merges several
+  symlinks to one file, a symlink plus the file itself, and hard links.
+- Each real file appears on exactly one row and is counted once in the totals.
+- The row shows:
+  1. the first (in sorted order) path to it that is **not** a symlink, if any
+     — i.e. the real file when it lives inside the scanned folder;
+  2. otherwise the first symlink path in sorted order.
+- A symlinked `.py` file whose target lies **outside** the scanned folder is
+  scanned and listed under the symlink's path (once, however many links point
+  to it).
+- A **broken** symlink (target missing, or a symlink loop) is listed with 0 for
+  every count and the marker `(unreadable)`, as in R3. Broken links are never
+  merged with each other.
+- Directory symlinks are still not followed (R1).
+
 ## Output format (example)
 
 ```
@@ -106,6 +157,14 @@ Summary
 ```
 
 Column widths adapt to the longest path.
+
+With an inaccessible subfolder `pkg/locked` (R7), stderr gets
+`Warning: cannot access folder: pkg/locked` and the summary on stdout ends with:
+
+```
+  Classes:        2
+  Incomplete:     1 folder(s) could not be accessed (see warnings)
+```
 
 ## Constraints
 
