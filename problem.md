@@ -15,3 +15,7 @@ As a computer science student, I've noticed that understanding an unfamiliar cod
 
 - R7: When RepoLens can't access a folder, show a clear warning with the folder's path, then continue scanning everything else, so users know their results are incomplete.
 - R8: Count each actual Python file only once, even if multiple symlinks point to it, so the final totals stay accurate.
+
+# Round 3 requirements
+
+- R9: Allow users to specify `--top N` to display only the N largest Python files, ranked by lines of code from highest to lowest, so they can quickly identify the biggest files in a large repository without scrolling through the entire report. The overall summary should still include all scanned files to ensure the repository statistics remain accurate.
