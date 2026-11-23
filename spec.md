@@ -1,10 +1,10 @@
-# repolens — Specification (Rounds 1–3)
+# repolens — Specification (Rounds 1–4)
 
 repolens is a command-line tool that gives a quick overview of a Python codebase:
 which files exist, how big they are, and how many functions and classes they hold.
 
 Source of requirements: `problem.md` (R1–R6 in Round 1, R7–R8 in Round 2, R9 in
-Round 3). This
+Round 3, R5 changed in Round 4). This
 document makes each requirement precise enough to test.
 
 ## Usage
@@ -89,6 +89,9 @@ everything inside them:
 Matching is by exact directory name. The folder passed on the command line is
 always scanned, even if its own name is in the list.
 
+Round 4 adds `.gitignore` rules on top of this list; see "R5 (changed in
+Round 4)" below. The list above still applies unchanged.
+
 ### R6 — Clear error for a missing or inaccessible folder
 
 The program prints a one-line message starting with `Error:` to **stderr** and
@@ -166,6 +169,80 @@ R6 covers the folder given on the command line. R7 covers folders **inside** it.
 - If no Python files are found, output is the same as without `--top`
   (`No Python files found.` and an all-zero summary; no `Showing` line).
 - Without `--top`, the output is exactly as before (all files, sorted by path).
+
+### R5 (changed in Round 4) — Also follow `.gitignore` rules
+
+RepoLens still skips the default directories listed in R5. In addition, it
+leaves out files and folders that the scanned folder's `.gitignore` files
+ignore.
+
+**Which `.gitignore` files are read**
+
+- Every file named exactly `.gitignore` in the scanned folder or in any
+  subfolder that is scanned. This applies whether or not the folder is a git
+  repository; a `.git` folder is not needed.
+- `.gitignore` files **outside** the scanned folder (in parent folders),
+  `.git/info/exclude` and the user's global excludes file are **not** read.
+  Output depends only on what is inside `<path>`.
+- A `.gitignore` inside a folder that is skipped (default list or ignored) is
+  never read.
+
+**Which paths a `.gitignore` applies to**
+
+- A `.gitignore` in folder `D` applies to every file and folder below `D`.
+  Its patterns are matched against the path relative to `D`.
+- Rules from all applicable `.gitignore` files are checked together. The
+  **last matching rule wins**, where rules from a deeper `.gitignore` come
+  after rules from a shallower one, and within one file later lines come after
+  earlier ones. If no rule matches, the path is not ignored.
+- An ignored **folder** is not entered: nothing inside it is scanned, its own
+  `.gitignore` is not read, and no R7 warning is printed for it. As in git, a
+  `!` rule cannot bring back a file whose parent folder is ignored.
+- An ignored **`.py` file** is not listed and not counted in the summary.
+- The scanned folder itself is never ignored.
+- The default directories of R5 are **always** skipped, even if a
+  `.gitignore` re-includes them (e.g. `!venv/`). `.gitignore` can only add to
+  what is skipped.
+
+**Pattern syntax** (git's `.gitignore` rules, implemented with the standard
+library only; git itself is not needed):
+
+- Blank lines match nothing. Lines starting with `#` are comments; `\#` at
+  the start matches a literal `#`.
+- Trailing spaces are removed unless escaped with `\`. A trailing `\r`
+  (Windows line ending) is removed.
+- A leading `!` negates the pattern: a matching path is **not** ignored.
+  `\!` at the start matches a literal `!`.
+- A trailing `/` makes the pattern match **folders only** (the `/` is not
+  part of the pattern).
+- If the pattern (without a trailing `/`) contains a `/` at the start or in
+  the middle, it is **anchored**: it matches the path relative to the
+  `.gitignore`'s folder. A leading `/` is removed. Otherwise the pattern
+  matches the **name** of a file or folder at any depth below that folder.
+- `*` matches any run of characters except `/`; `?` matches one character
+  except `/`; `[...]` matches one character from the set (ranges like `a-z`,
+  and `[!...]` / `[^...]` for "not in set"); it never matches `/`.
+- `**`: a leading `**/` matches in every folder; a trailing `/**` matches
+  everything inside; `/**/` matches zero or more folders. Any other `**`
+  acts like `*`.
+- `\` before any other character matches that character literally.
+- Matching is case-sensitive on every platform.
+
+**Other rules**
+
+- A `.py` symlink is matched by its own path (where the link is), not by its
+  target's path. If a file is ignored under one path but reachable under
+  another path that is not ignored (a symlink or hard link), it is counted
+  once under the path that is not ignored (R8).
+- If a `.gitignore` exists but cannot be read (e.g. permission denied), one
+  line is printed to **stderr**:
+  `Warning: cannot read .gitignore: <relative path>` (relative to the scanned
+  folder, `/`-separated, sorted with other such warnings, printed after the R7
+  folder warnings). The scan continues as if that file were empty. The exit
+  status stays 0 and no `Incomplete:` line is added (no folder was missed).
+- Output format is unchanged: ignored files simply do not appear, like files
+  in a default-skipped folder. There is no count of ignored files and no
+  option to turn `.gitignore` handling off.
 
 ## Output format (example)
 
