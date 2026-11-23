@@ -8,7 +8,10 @@ folder and it lists every Python file (including those in subfolders) with:
 - the number of functions (including `async def` and methods) and classes,
 
 followed by a summary of totals. Folders like `.git`, `.venv`, `venv` and
-`__pycache__` are skipped automatically. Full behaviour is in [spec.md](spec.md).
+`__pycache__` are skipped automatically, and so is anything ignored by a
+`.gitignore` file inside the scanned folder (including nested `.gitignore`
+files and wildcard patterns; git itself is not needed). Full behaviour is in
+[spec.md](spec.md).
 
 ## Setup
 
@@ -74,6 +77,8 @@ an `Error:` message to stderr and exits with status 1.
 If a folder *inside* it cannot be read, repolens prints
 `Warning: cannot access folder: <path>` to stderr, scans everything else, and
 adds an `Incomplete:` line to the summary so you know the totals are partial.
+If a `.gitignore` cannot be read, it prints
+`Warning: cannot read .gitignore: <path>` and scans as if that file were empty.
 
 A file reached through several symlinks (or hard links) is listed and counted
 only once, under its real path when that is inside the folder.
