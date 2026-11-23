@@ -26,7 +26,7 @@ pytest for the tests.
 ## Run
 
 ```
-python -m repolens <path>
+python -m repolens <path> [--top N]
 ```
 
 Example:
@@ -46,6 +46,27 @@ Summary
   Functions:      4
   Classes:        2
 ```
+
+To see only the biggest files, add `--top N`. The table then lists the N files
+with the most lines of code, largest first; the summary still covers every file:
+
+```
+$ python -m repolens tests/fixtures/basic --top 2
+Showing the 2 largest of 4 files (ranked by lines of code).
+
+File           Lines  Functions  Classes
+-------------  -----  ---------  -------
+pkg/models.py      7          2        2
+main.py            5          1        0
+
+Summary
+  Files scanned:  4
+  Lines of code:  14
+  Functions:      4
+  Classes:        2
+```
+
+N must be a whole number of 1 or more.
 
 If the folder does not exist, is not a folder, or cannot be read, repolens prints
 an `Error:` message to stderr and exits with status 1.
