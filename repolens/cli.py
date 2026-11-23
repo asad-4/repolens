@@ -1,4 +1,4 @@
-"""Command-line entry point: python -m repolens <path> (R1, R6)."""
+"""Command-line entry point: python -m repolens <path> [--top N] (R1, R6, R9)."""
 
 import argparse
 import os
@@ -23,12 +23,32 @@ def _check_folder(path: Path) -> Optional[str]:
     return None
 
 
+def _positive_int(text: str) -> int:
+    """argparse type for --top: a whole number of 1 or more (R9)."""
+    try:
+        value = int(text)
+    except ValueError:
+        value = 0
+    if value < 1:
+        raise argparse.ArgumentTypeError(
+            "must be a whole number of 1 or more, got {!r}".format(text)
+        )
+    return value
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         prog="repolens",
         description="Summarise the Python files in a folder.",
     )
     parser.add_argument("path", help="folder to scan")
+    parser.add_argument(
+        "--top",
+        type=_positive_int,
+        metavar="N",
+        help="show only the N files with the most lines of code "
+        "(the summary still counts every file)",
+    )
     args = parser.parse_args(argv)
 
     root = Path(args.path)
@@ -41,5 +61,5 @@ def main(argv: Optional[List[str]] = None) -> int:
     # R7: warn about each inaccessible subfolder, then report what was found.
     for rel in result.inaccessible_dirs:
         print("Warning: cannot access folder: {}".format(rel), file=sys.stderr)
-    print(format_report(result.files, len(result.inaccessible_dirs)))
+    print(format_report(result.files, len(result.inaccessible_dirs), args.top))
     return 0
