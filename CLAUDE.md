@@ -28,8 +28,11 @@
 - Requirements: `problem.md` (source) and `spec.md` (precise, testable version).
   `spec.md` is one cumulative file: add each round's requirements as new
   sections and update the round range in its title.
-- The README output example is copied by hand from
-  `python -m repolens tests/fixtures/basic`; update it when stdout changes.
+- The README output examples are copied by hand from
+  `python -m repolens tests/fixtures/basic` and
+  `python -m repolens tests/fixtures/basic --top 2`; update them when stdout changes.
+- Output text (labels, spacing, warning and `Showing` lines) is asserted as exact
+  strings in tests. Change spec, tests and README together when wording changes.
 - Run: `python -m repolens <path>`. Test: `pytest`.
 - Decisions: `docs/decisions/NNNN-*.md` (Y-statements).
 - Handoffs between sessions: `handoff-round-N.md` at the repo root. At the start
