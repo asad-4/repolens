@@ -12,8 +12,10 @@
 - Run commands from the repo root with `.venv` activated (`source .venv/bin/activate`).
 - Never "fix" files under `tests/fixtures/`: some are deliberately broken
   (syntax errors, unterminated strings). Keep `norecursedirs = fixtures` in `pytest.ini`.
-- Build test trees that need symlinks, hard links, chmod or skipped folders
-  (`.git`, `.venv`, …) in `tmp_path`, never in `tests/fixtures/`. Always restore
+- Build test trees that need symlinks, hard links, chmod, skipped folders
+  (`.git`, `.venv`, …) or `.gitignore` files in `tmp_path`, never in
+  `tests/fixtures/`. A `.gitignore` committed there would make this repo's own
+  git ignore the fixture files it is meant to test. Always restore
   permissions in a `finally` or fixture teardown, or pytest cannot clean up.
 - Permission-based tests skip on Windows and as root; symlink tests skip on
   Windows. Use the existing `skipif` patterns.
