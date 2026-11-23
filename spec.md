@@ -1,18 +1,20 @@
-# repolens — Specification (Rounds 1–2)
+# repolens — Specification (Rounds 1–3)
 
 repolens is a command-line tool that gives a quick overview of a Python codebase:
 which files exist, how big they are, and how many functions and classes they hold.
 
-Source of requirements: `problem.md` (R1–R6 in Round 1, R7–R8 in Round 2). This
+Source of requirements: `problem.md` (R1–R6 in Round 1, R7–R8 in Round 2, R9 in
+Round 3). This
 document makes each requirement precise enough to test.
 
 ## Usage
 
 ```
-python -m repolens <path>
+python -m repolens <path> [--top N]
 ```
 
-Exactly one positional argument: the folder to scan.
+Exactly one positional argument: the folder to scan. The optional `--top N`
+(R9) may appear before or after it.
 
 ## Requirements
 
@@ -31,6 +33,7 @@ Exactly one positional argument: the folder to scan.
 - For each scanned file, the output shows its path relative to the given folder,
   using `/` as the separator on every platform.
 - Files are listed in sorted order by relative path, so output is deterministic.
+  (`--top N` changes the order and number of rows; see R9.)
 - **Lines of code (LOC)** = the number of lines that contain at least one Python
   token that is not a comment. Concretely:
   - blank / whitespace-only lines are not counted;
@@ -140,6 +143,30 @@ R6 covers the folder given on the command line. R7 covers folders **inside** it.
   merged with each other.
 - Directory symlinks are still not followed (R1).
 
+### R9 — `--top N`: show only the N largest files (Round 3)
+
+- `--top N` limits the per-file table to the N files with the most lines of
+  code (R2 LOC), ranked from highest to lowest.
+- Files with equal LOC are ordered by relative path (the R2 order), so output
+  is deterministic. Exactly `min(N, total files)` rows are shown; ties at the
+  cut-off are not extended.
+- N must be a whole number ≥ 1. `0`, negative numbers and non-numbers are
+  rejected with an `argparse` usage error on stderr and exit status **2**,
+  like other invalid arguments. Nothing is scanned in that case.
+- If N is larger than the number of files, every file is shown, ranked by LOC.
+- Files marked `(parse error)` or `(unreadable)` take part in the ranking with
+  the LOC shown on their row (0 for unreadable files); their marker is kept.
+- When `--top` is given and at least one file was found, the first line of
+  stdout is:
+  `Showing the K largest of M files (ranked by lines of code).`
+  where K = `min(N, M)` and M = number of files scanned, followed by a blank
+  line and then the table.
+- The **summary is unchanged**: it counts every scanned file, not just the
+  rows shown (R4). The R7 `Incomplete:` line and warnings also still appear.
+- If no Python files are found, output is the same as without `--top`
+  (`No Python files found.` and an all-zero summary; no `Showing` line).
+- Without `--top`, the output is exactly as before (all files, sorted by path).
+
 ## Output format (example)
 
 ```
@@ -164,6 +191,23 @@ With an inaccessible subfolder `pkg/locked` (R7), stderr gets
 ```
   Classes:        2
   Incomplete:     1 folder(s) could not be accessed (see warnings)
+```
+
+With `--top 2` on the same folder:
+
+```
+Showing the 2 largest of 3 files (ranked by lines of code).
+
+File           Lines  Functions  Classes
+-------------  -----  ---------  -------
+pkg/models.py     30          5        2
+main.py           12          2        0
+
+Summary
+  Files scanned:  3
+  Lines of code:  46
+  Functions:      7
+  Classes:        2
 ```
 
 ## Constraints
