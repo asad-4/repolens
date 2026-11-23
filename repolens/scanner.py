@@ -4,11 +4,13 @@ import ast
 import io
 import os
 import tokenize
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
-# R5: directory names that are never descended into.
+from repolens.gitignore import Rule, is_ignored, parse_gitignore
+
+# R5: directory names that are never descended into, whatever .gitignore says.
 SKIP_DIRS = frozenset(
     {
         ".git",
@@ -51,12 +53,15 @@ class FileStats:
 class Discovery:
     files: List[Path]  # sorted by relative path
     inaccessible_dirs: List[str]  # relative, '/'-separated, sorted (R7)
+    # .gitignore files that exist but could not be read (R5, Round 4)
+    unreadable_gitignores: List[str] = field(default_factory=list)
 
 
 @dataclass
 class ScanResult:
     files: List[FileStats]
     inaccessible_dirs: List[str]
+    unreadable_gitignores: List[str] = field(default_factory=list)
 
 
 def _rel(path: Path, root: Path) -> str:
@@ -64,13 +69,18 @@ def _rel(path: Path, root: Path) -> str:
 
 
 def discover(root: Path) -> Discovery:
-    """Walk root for .py files (R1), skipping SKIP_DIRS (R5).
+    """Walk root for .py files (R1), skipping SKIP_DIRS and paths ignored by
+    .gitignore files inside root (R5).
 
     Subfolders that cannot be listed are recorded instead of being silently
-    dropped (R7).
+    dropped (R7), and so are .gitignore files that cannot be read.
     """
     found = []
     inaccessible = []
+    unreadable_gitignores = []  # type: List[str]
+    # Rules that apply inside each visited folder: its parents' rules, then
+    # its own .gitignore's, so the last matching rule is the deepest one.
+    rules_for = {}  # type: Dict[str, List[Rule]]
 
     def on_error(err: OSError) -> None:
         # os.walk calls this when listing a directory fails. The root itself
@@ -84,15 +94,41 @@ def discover(root: Path) -> Discovery:
     for dirpath, dirnames, filenames in os.walk(
         root, onerror=on_error, followlinks=False
     ):
-        # Prune in place so os.walk never enters skipped directories.
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        here = Path(dirpath)
+        rel_dir = _rel(here, root) if here != root else ""
+        parent = rel_dir.rsplit("/", 1)[0] if "/" in rel_dir else ""
+        rules = list(rules_for.get(parent, [])) if rel_dir else []
+        if ".gitignore" in filenames:
+            try:
+                text = (here / ".gitignore").read_text(
+                    encoding="utf-8", errors="surrogateescape"
+                )
+            except OSError:
+                unreadable_gitignores.append(_join(rel_dir, ".gitignore"))
+            else:
+                rules.extend(parse_gitignore(text, rel_dir))
+        rules_for[rel_dir] = rules
+
+        # Prune in place so os.walk never enters skipped or ignored folders.
+        dirnames[:] = [
+            d
+            for d in dirnames
+            if d not in SKIP_DIRS and not is_ignored(rules, _join(rel_dir, d), True)
+        ]
         for name in filenames:
-            if name.endswith(".py"):
-                found.append(Path(dirpath) / name)
+            if name.endswith(".py") and not is_ignored(
+                rules, _join(rel_dir, name), False
+            ):
+                found.append(here / name)
     return Discovery(
         files=sorted(_one_path_per_file(found), key=lambda p: _rel(p, root)),
         inaccessible_dirs=sorted(inaccessible),
+        unreadable_gitignores=sorted(unreadable_gitignores),
     )
+
+
+def _join(rel_dir: str, name: str) -> str:
+    return rel_dir + "/" + name if rel_dir else name
 
 
 def _one_path_per_file(paths: List[Path]) -> List[Path]:
@@ -119,7 +155,7 @@ def _one_path_per_file(paths: List[Path]) -> List[Path]:
 
 
 def find_python_files(root: Path) -> List[Path]:
-    """Return every .py file under root (R1), skipping SKIP_DIRS (R5), sorted."""
+    """Return every .py file under root (R1), minus skipped and ignored ones (R5), sorted."""
     return discover(root).files
 
 
@@ -183,4 +219,5 @@ def scan(root: Path) -> ScanResult:
     return ScanResult(
         files=[analyze_file(p, root) for p in found.files],
         inaccessible_dirs=found.inaccessible_dirs,
+        unreadable_gitignores=found.unreadable_gitignores,
     )

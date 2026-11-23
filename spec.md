@@ -222,6 +222,8 @@ library only; git itself is not needed):
 - `*` matches any run of characters except `/`; `?` matches one character
   except `/`; `[...]` matches one character from the set (ranges like `a-z`,
   and `[!...]` / `[^...]` for "not in set"); it never matches `/`.
+  A `[` without a closing `]` makes the whole pattern match nothing
+  (as in git).
 - `**`: a leading `**/` matches in every folder; a trailing `/**` matches
   everything inside; `/**/` matches zero or more folders. Any other `**`
   acts like `*`.

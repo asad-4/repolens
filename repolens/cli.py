@@ -61,5 +61,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     # R7: warn about each inaccessible subfolder, then report what was found.
     for rel in result.inaccessible_dirs:
         print("Warning: cannot access folder: {}".format(rel), file=sys.stderr)
+    # R5: an unreadable .gitignore is treated as empty, but say so.
+    for rel in result.unreadable_gitignores:
+        print("Warning: cannot read .gitignore: {}".format(rel), file=sys.stderr)
     print(format_report(result.files, len(result.inaccessible_dirs), args.top))
     return 0
