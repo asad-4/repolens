@@ -19,3 +19,7 @@ As a computer science student, I've noticed that understanding an unfamiliar cod
 # Round 3 requirements
 
 - R9: Allow users to specify `--top N` to display only the N largest Python files, ranked by lines of code from highest to lowest, so they can quickly identify the biggest files in a large repository without scrolling through the entire report. The overall summary should still include all scanned files to ensure the repository statistics remain accurate.
+
+# Round 4 requirements
+
+- R5 changed: Previously, RepoLens automatically skipped a fixed list of unnecessary folders such as `.git`, `.venv`, `venv`, and `__pycache__`. Now, RepoLens should also respect the repository's `.gitignore` rules, including ignored files, folders, wildcard patterns, and nested `.gitignore` files, while continuing to skip the original default directories. This allows RepoLens to focus on the project's actual source code instead of generated files, dependencies, or temporary files, making its reports more accurate and useful.
