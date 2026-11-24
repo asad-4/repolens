@@ -23,3 +23,7 @@ As a computer science student, I've noticed that understanding an unfamiliar cod
 # Round 4 requirements
 
 - R5 changed: Previously, RepoLens automatically skipped a fixed list of unnecessary folders such as `.git`, `.venv`, `venv`, and `__pycache__`. Now, RepoLens should also respect the repository's `.gitignore` rules, including ignored files, folders, wildcard patterns, and nested `.gitignore` files, while continuing to skip the original default directories. This allows RepoLens to focus on the project's actual source code instead of generated files, dependencies, or temporary files, making its reports more accurate and useful.
+
+# Round 5 requirements
+
+- R10: Allow users to add `--format json` to print the report as JSON instead of a table, with the same files and summary totals, so that users can easily process the results using other programs and automate their code analysis without having to manually extract data from a table.
