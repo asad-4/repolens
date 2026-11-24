@@ -35,6 +35,14 @@
   `python -m repolens tests/fixtures/basic --top 2`; update them when stdout changes.
 - Output text (labels, spacing, warning and `Showing` lines) is asserted as exact
   strings in tests. Change spec, tests and README together when wording changes.
+- The `--format json` shape is a public contract: add new keys at the end of
+  their object; never rename, remove or reorder keys without asking the user.
+  Any new per-file or summary value goes into both renderers
+  (`format_report()` and `format_json()`).
+- In `--format json` mode stdout holds only the JSON document; warnings,
+  notices and progress go to stderr.
+- New fields on `Discovery`, `ScanResult` and new parameters of `format_json()`
+  get defaults, so existing callers and tests keep working.
 - Run: `python -m repolens <path>`. Test: `pytest`.
 - Decisions: `docs/decisions/NNNN-*.md` (Y-statements).
 - Handoffs between sessions: `handoff-round-N.md` at the repo root. At the start
