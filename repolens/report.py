@@ -21,6 +21,7 @@ def format_json(
     inaccessible_dirs: Optional[List[str]] = None,
     unreadable_gitignores: Optional[List[str]] = None,
     top: Optional[int] = None,
+    symlinked_gitignores: Optional[List[str]] = None,
 ) -> str:
     """The report as one JSON object (R10).
 
@@ -59,6 +60,8 @@ def format_json(
             ("inaccessible_folders", list(inaccessible_dirs or [])),
             ("unreadable_gitignores", list(unreadable_gitignores or [])),
             ("top", top),
+            # R11 (Round 6): added last so earlier key order is unchanged.
+            ("symlinked_gitignores", list(symlinked_gitignores or [])),
         ]
     )
     # ensure_ascii: escape non-ASCII path characters so any terminal can print it.

@@ -86,6 +86,7 @@ def test_r10_top_level_keys_in_order(run_cli, fixtures_dir):
         "inaccessible_folders",
         "unreadable_gitignores",
         "top",
+        "symlinked_gitignores",  # added last by R11 (Round 6)
     ]
 
 
@@ -102,6 +103,7 @@ def test_r10_exact_output_for_basic_fixture(run_cli, fixtures_dir):
         "inaccessible_folders": [],
         "unreadable_gitignores": [],
         "top": None,
+        "symlinked_gitignores": [],  # R11 (Round 6)
     }
 
 

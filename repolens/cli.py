@@ -71,6 +71,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     # R5: an unreadable .gitignore is treated as empty, but say so.
     for rel in result.unreadable_gitignores:
         print("Warning: cannot read .gitignore: {}".format(rel), file=sys.stderr)
+    # R11: a symlinked .gitignore is skipped unread, as git does; say so.
+    for rel in result.symlinked_gitignores:
+        print(
+            "Warning: skipped .gitignore that is a symlink: {}".format(rel),
+            file=sys.stderr,
+        )
     if args.format == "json":
         # R10: same rows and totals as the table; warnings stay on stderr too.
         print(
@@ -79,6 +85,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 result.inaccessible_dirs,
                 result.unreadable_gitignores,
                 args.top,
+                result.symlinked_gitignores,
             )
         )
     else:

@@ -55,6 +55,8 @@ class Discovery:
     inaccessible_dirs: List[str]  # relative, '/'-separated, sorted (R7)
     # .gitignore files that exist but could not be read (R5, Round 4)
     unreadable_gitignores: List[str] = field(default_factory=list)
+    # .gitignore entries that are symlinks, skipped unread (R11, Round 6)
+    symlinked_gitignores: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -62,6 +64,7 @@ class ScanResult:
     files: List[FileStats]
     inaccessible_dirs: List[str]
     unreadable_gitignores: List[str] = field(default_factory=list)
+    symlinked_gitignores: List[str] = field(default_factory=list)
 
 
 def _rel(path: Path, root: Path) -> str:
@@ -73,11 +76,14 @@ def discover(root: Path) -> Discovery:
     .gitignore files inside root (R5).
 
     Subfolders that cannot be listed are recorded instead of being silently
-    dropped (R7), and so are .gitignore files that cannot be read.
+    dropped (R7), and so are .gitignore files that cannot be read. A
+    .gitignore that is a symlink is never followed (R11): it is recorded and
+    its rules are not used, as git 2.32+ does.
     """
     found = []
     inaccessible = []
     unreadable_gitignores = []  # type: List[str]
+    symlinked_gitignores = []  # type: List[str]
     # Rules that apply inside each visited folder: its parents' rules, then
     # its own .gitignore's, so the last matching rule is the deepest one.
     rules_for = {}  # type: Dict[str, List[Rule]]
@@ -98,9 +104,16 @@ def discover(root: Path) -> Discovery:
         rel_dir = _rel(here, root) if here != root else ""
         parent = rel_dir.rsplit("/", 1)[0] if "/" in rel_dir else ""
         rules = list(rules_for.get(parent, [])) if rel_dir else []
-        if ".gitignore" in filenames:
+        gitignore = here / ".gitignore"
+        # R11: a symlink named .gitignore may sit in filenames (file target,
+        # broken link, loop) or in dirnames (folder target); skip it in both.
+        if (".gitignore" in filenames or ".gitignore" in dirnames) and (
+            gitignore.is_symlink()
+        ):
+            symlinked_gitignores.append(_join(rel_dir, ".gitignore"))
+        elif ".gitignore" in filenames:
             try:
-                text = (here / ".gitignore").read_text(
+                text = gitignore.read_text(
                     encoding="utf-8", errors="surrogateescape"
                 )
             except OSError:
@@ -124,6 +137,7 @@ def discover(root: Path) -> Discovery:
         files=sorted(_one_path_per_file(found), key=lambda p: _rel(p, root)),
         inaccessible_dirs=sorted(inaccessible),
         unreadable_gitignores=sorted(unreadable_gitignores),
+        symlinked_gitignores=sorted(symlinked_gitignores),
     )
 
 
@@ -220,4 +234,5 @@ def scan(root: Path) -> ScanResult:
         files=[analyze_file(p, root) for p in found.files],
         inaccessible_dirs=found.inaccessible_dirs,
         unreadable_gitignores=found.unreadable_gitignores,
+        symlinked_gitignores=found.symlinked_gitignores,
     )
