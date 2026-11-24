@@ -1,20 +1,20 @@
-# repolens — Specification (Rounds 1–4)
+# repolens — Specification (Rounds 1–5)
 
 repolens is a command-line tool that gives a quick overview of a Python codebase:
 which files exist, how big they are, and how many functions and classes they hold.
 
 Source of requirements: `problem.md` (R1–R6 in Round 1, R7–R8 in Round 2, R9 in
-Round 3, R5 changed in Round 4). This
+Round 3, R5 changed in Round 4, R10 in Round 5). This
 document makes each requirement precise enough to test.
 
 ## Usage
 
 ```
-python -m repolens <path> [--top N]
+python -m repolens <path> [--top N] [--format {table,json}]
 ```
 
-Exactly one positional argument: the folder to scan. The optional `--top N`
-(R9) may appear before or after it.
+Exactly one positional argument: the folder to scan. The options `--top N`
+(R9) and `--format` (R10) may appear before or after it, in any order.
 
 ## Requirements
 
@@ -246,6 +246,49 @@ library only; git itself is not needed):
   in a default-skipped folder. There is no count of ignored files and no
   option to turn `.gitignore` handling off.
 
+### R10 — `--format json`: print the report as JSON (Round 5)
+
+- `--format` takes one of two values: `table` (the default; the output of
+  R2–R9, unchanged) or `json`. Leaving `--format` out is the same as
+  `--format table`. Any other value (including `JSON` in capitals) is rejected
+  with an `argparse` usage error on stderr and exit status **2**; nothing is
+  scanned.
+- With `--format json`, stdout holds exactly one JSON document and nothing
+  else (no table, no `Showing` line, no `No Python files found.` line),
+  followed by a single newline. The exit status is **0**, as for the table.
+- The document is one JSON object with these keys, in this order:
+
+  | Key | Value |
+  |---|---|
+  | `files` | list of file objects (see below) — the same rows the table would show, in the same order |
+  | `summary` | object: `files_scanned`, `lines_of_code`, `functions`, `classes` (integers, the R4 totals over **every** scanned file) |
+  | `inaccessible_folders` | list of strings: the R7 folders, relative, `/`-separated, sorted (empty list if none) |
+  | `unreadable_gitignores` | list of strings: the unreadable `.gitignore` files of R5 (Round 4), same form (empty list if none) |
+  | `top` | the `--top` value N as an integer, or `null` when `--top` was not given |
+
+- Each file object has these keys, in this order:
+  `path` (string, relative, `/`-separated, as in R2), `lines` (integer, R2
+  LOC), `functions` (integer), `classes` (integer), `note` (`"parse error"`,
+  `"unreadable"`, or `null` when the table row has no marker).
+- **Files and totals match the table.** For the same folder and `--top`
+  value, `files` holds the same paths with the same numbers and markers, in
+  the same order, as the table rows, and `summary` holds the same totals as the
+  table's summary.
+- **With `--top N`** (R9): `files` holds the `min(N, M)` largest files ranked
+  by lines of code, ties by path, exactly as the table. `summary` still counts
+  all M scanned files. The number of files shown is the length of `files`.
+- **No Python files found**: `files` is `[]` and every summary total is `0`.
+- **Warnings**: the R7 folder warnings and `.gitignore` warnings are still
+  printed to **stderr** exactly as in table mode, and the same paths also
+  appear in `inaccessible_folders` / `unreadable_gitignores`. A program can
+  tell the totals are incomplete when `inaccessible_folders` is not empty (the
+  table's `Incomplete:` line has no separate key).
+- **Errors** (R6, invalid arguments) are unchanged: plain text on stderr,
+  exit status 1 or 2, nothing on stdout, whatever `--format` is.
+- **Encoding**: the JSON is indented with 2 spaces and is pure ASCII:
+  any non-ASCII character in a path is written as a `\uXXXX` escape, so the
+  output can be printed on any terminal and parsed by any JSON reader.
+
 ## Output format (example)
 
 ```
@@ -287,6 +330,38 @@ Summary
   Lines of code:  46
   Functions:      7
   Classes:        2
+```
+
+With `--format json --top 2` on the same folder (no warnings):
+
+```json
+{
+  "files": [
+    {
+      "path": "pkg/models.py",
+      "lines": 30,
+      "functions": 5,
+      "classes": 2,
+      "note": null
+    },
+    {
+      "path": "main.py",
+      "lines": 12,
+      "functions": 2,
+      "classes": 0,
+      "note": null
+    }
+  ],
+  "summary": {
+    "files_scanned": 3,
+    "lines_of_code": 46,
+    "functions": 7,
+    "classes": 2
+  },
+  "inaccessible_folders": [],
+  "unreadable_gitignores": [],
+  "top": 2
+}
 ```
 
 ## Constraints
