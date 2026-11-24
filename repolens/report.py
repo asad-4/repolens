@@ -1,5 +1,7 @@
-"""Render scan results as text (R2, R3, R4, R9)."""
+"""Render scan results as a text table or as JSON (R2, R3, R4, R9, R10)."""
 
+import json
+from collections import OrderedDict
 from typing import List, Optional
 
 from repolens.scanner import FileStats
@@ -12,6 +14,55 @@ def largest_files(stats: List[FileStats], n: int) -> List[FileStats]:
 
     Equal LOC keeps path order, so the result is deterministic."""
     return sorted(stats, key=lambda s: (-s.loc, s.path))[:n]
+
+
+def format_json(
+    stats: List[FileStats],
+    inaccessible_dirs: Optional[List[str]] = None,
+    unreadable_gitignores: Optional[List[str]] = None,
+    top: Optional[int] = None,
+) -> str:
+    """The report as one JSON object (R10).
+
+    Rows are chosen exactly as in format_report() (all files in path order, or
+    the `top` largest), and the summary always covers every file in `stats`.
+    """
+    shown = stats if top is None else largest_files(stats, top)
+    report = OrderedDict(
+        [
+            (
+                "files",
+                [
+                    OrderedDict(
+                        [
+                            ("path", s.path),
+                            ("lines", s.loc),
+                            ("functions", s.functions),
+                            ("classes", s.classes),
+                            ("note", s.note),
+                        ]
+                    )
+                    for s in shown
+                ],
+            ),
+            (
+                "summary",
+                OrderedDict(
+                    [
+                        ("files_scanned", len(stats)),
+                        ("lines_of_code", sum(s.loc for s in stats)),
+                        ("functions", sum(s.functions for s in stats)),
+                        ("classes", sum(s.classes for s in stats)),
+                    ]
+                ),
+            ),
+            ("inaccessible_folders", list(inaccessible_dirs or [])),
+            ("unreadable_gitignores", list(unreadable_gitignores or [])),
+            ("top", top),
+        ]
+    )
+    # ensure_ascii: escape non-ASCII path characters so any terminal can print it.
+    return json.dumps(report, indent=2, ensure_ascii=True)
 
 
 def format_report(
