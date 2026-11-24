@@ -96,13 +96,14 @@ $ python -m repolens tests/fixtures/basic --format json
   },
   "inaccessible_folders": [],
   "unreadable_gitignores": [],
-  "top": null
+  "top": null,
+  "symlinked_gitignores": []
 }
 ```
 
 `note` is `"parse error"`, `"unreadable"` or `null`. Warnings are still printed
-to stderr and are also listed in `inaccessible_folders` and
-`unreadable_gitignores`. `--format table` (the default) gives the normal table.
+to stderr and are also listed in `inaccessible_folders`,
+`unreadable_gitignores` and `symlinked_gitignores`. `--format table` (the default) gives the normal table.
 
 If the folder does not exist, is not a folder, or cannot be read, repolens prints
 an `Error:` message to stderr and exits with status 1.
@@ -112,6 +113,9 @@ If a folder *inside* it cannot be read, repolens prints
 adds an `Incomplete:` line to the summary so you know the totals are partial.
 If a `.gitignore` cannot be read, it prints
 `Warning: cannot read .gitignore: <path>` and scans as if that file were empty.
+A `.gitignore` that is a symbolic link is not followed and its rules are not
+used (as in git 2.32 and later); repolens prints
+`Warning: skipped .gitignore that is a symlink: <path>` and carries on.
 
 A file reached through several symlinks (or hard links) is listed and counted
 only once, under its real path when that is inside the folder.
