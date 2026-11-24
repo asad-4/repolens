@@ -1,10 +1,10 @@
-# repolens — Specification (Rounds 1–5)
+# repolens — Specification (Rounds 1–6)
 
 repolens is a command-line tool that gives a quick overview of a Python codebase:
 which files exist, how big they are, and how many functions and classes they hold.
 
 Source of requirements: `problem.md` (R1–R6 in Round 1, R7–R8 in Round 2, R9 in
-Round 3, R5 changed in Round 4, R10 in Round 5). This
+Round 3, R5 changed in Round 4, R10 in Round 5, R11 in Round 6). This
 document makes each requirement precise enough to test.
 
 ## Usage
@@ -186,6 +186,7 @@ ignore.
   Output depends only on what is inside `<path>`.
 - A `.gitignore` inside a folder that is skipped (default list or ignored) is
   never read.
+- A `.gitignore` that is a symbolic link is never read (R11, Round 6).
 
 **Which paths a `.gitignore` applies to**
 
@@ -265,6 +266,7 @@ library only; git itself is not needed):
   | `inaccessible_folders` | list of strings: the R7 folders, relative, `/`-separated, sorted (empty list if none) |
   | `unreadable_gitignores` | list of strings: the unreadable `.gitignore` files of R5 (Round 4), same form (empty list if none) |
   | `top` | the `--top` value N as an integer, or `null` when `--top` was not given |
+| `symlinked_gitignores` | list of strings: the `.gitignore` symlinks skipped by R11 (Round 6), relative, `/`-separated, sorted (empty list if none) |
 
 - Each file object has these keys, in this order:
   `path` (string, relative, `/`-separated, as in R2), `lines` (integer, R2
@@ -288,6 +290,35 @@ library only; git itself is not needed):
 - **Encoding**: the JSON is indented with 2 spaces and is pure ASCII:
   any non-ASCII character in a path is written as a `\uXXXX` escape, so the
   output can be printed on any terminal and parsed by any JSON reader.
+
+### R11 — Skip a `.gitignore` that is a symbolic link (Round 6)
+
+R11 narrows "Which `.gitignore` files are read" in R5 (changed in Round 4).
+It matches git 2.32 and later, which do not follow a symlinked `.gitignore`.
+
+- An entry named exactly `.gitignore` that is a **symbolic link** is skipped:
+  the link is not followed, its target is not opened, and none of its rules
+  are applied. Scanning continues as if that folder had no `.gitignore`;
+  rules from `.gitignore` files in parent folders still apply there.
+- This holds whatever the link points to: a file inside or outside the
+  scanned folder, a folder, a missing target (broken link) or a link loop.
+  A broken `.gitignore` link is therefore reported by R11, not as an
+  unreadable `.gitignore`.
+- A `.gitignore` that is a regular file is read as before, including a hard
+  link (hard links are not symbolic links).
+- For each skipped link, one line is printed to **stderr**:
+  `Warning: skipped .gitignore that is a symlink: <relative path>`
+  (relative to the scanned folder, `/`-separated). These lines are sorted by
+  path and printed after the R7 folder warnings and the
+  `cannot read .gitignore` warnings.
+- With `--format json` (R10), the same paths are listed, sorted, in the
+  top-level key `symlinked_gitignores` (the last key; `[]` when there are
+  none). The warnings are printed to stderr in both formats.
+- The exit status stays **0** and no `Incomplete:` line is added: no folder
+  was missed. The table on stdout is unchanged.
+- A symlinked `.gitignore` inside a folder that is skipped (default list or
+  ignored) is never seen, so it produces no warning.
+- The skipped link is not a `.py` file, so it never appears in the report.
 
 ## Output format (example)
 
@@ -360,7 +391,8 @@ With `--format json --top 2` on the same folder (no warnings):
   },
   "inaccessible_folders": [],
   "unreadable_gitignores": [],
-  "top": 2
+  "top": 2,
+  "symlinked_gitignores": []
 }
 ```
 
