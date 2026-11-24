@@ -29,7 +29,7 @@ pytest for the tests.
 ## Run
 
 ```
-python -m repolens <path> [--top N]
+python -m repolens <path> [--top N] [--format {table,json}]
 ```
 
 Example:
@@ -70,6 +70,39 @@ Summary
 ```
 
 N must be a whole number of 1 or more.
+
+To feed the results to another program, add `--format json`. stdout then holds
+one JSON object with the same files (and `--top` ranking) and the same summary
+totals as the table:
+
+```
+$ python -m repolens tests/fixtures/basic --format json
+{
+  "files": [
+    {
+      "path": "main.py",
+      "lines": 5,
+      "functions": 1,
+      "classes": 0,
+      "note": null
+    },
+    ...
+  ],
+  "summary": {
+    "files_scanned": 4,
+    "lines_of_code": 14,
+    "functions": 4,
+    "classes": 2
+  },
+  "inaccessible_folders": [],
+  "unreadable_gitignores": [],
+  "top": null
+}
+```
+
+`note` is `"parse error"`, `"unreadable"` or `null`. Warnings are still printed
+to stderr and are also listed in `inaccessible_folders` and
+`unreadable_gitignores`. `--format table` (the default) gives the normal table.
 
 If the folder does not exist, is not a folder, or cannot be read, repolens prints
 an `Error:` message to stderr and exits with status 1.
