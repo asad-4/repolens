@@ -27,3 +27,7 @@ As a computer science student, I've noticed that understanding an unfamiliar cod
 # Round 5 requirements
 
 - R10: Allow users to add `--format json` to print the report as JSON instead of a table, with the same files and summary totals, so that users can easily process the results using other programs and automate their code analysis without having to manually extract data from a table.
+
+# Round 6 requirements
+
+- R11: When RepoLens encounters a `.gitignore` file that is a symbolic link, it should skip the file without following the link or applying its rules, so that its scanning behavior remains consistent with Git, prevents unintended file exclusions, and produces accurate and predictable repository analysis.
